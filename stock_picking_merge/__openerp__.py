@@ -12,8 +12,6 @@
     "website": "http://ahmet.altinisik.net",
     "category": "Warehouse Management",
     "author": "Kiran Kantesariya, Ahmet Altinisik",
-    "description": """
-     """,
     "depends": [
         "stock"
     ],
