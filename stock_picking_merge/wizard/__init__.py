@@ -1,3 +1,2 @@
 # -*- coding: utf-8 -*-
-
-import picking_merge_wiz
+from . import picking_merge_wiz

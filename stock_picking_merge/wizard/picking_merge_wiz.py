@@ -1,11 +1,13 @@
-# coding: utf-8
+# -*- coding: utf-8 -*-
+# Copyright 2018 Ahmet Altinisik
+# Copyright 2018 Binovo IT Human Project SL
+# License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
+import psycopg2
 
-from openerp import api, fields, models, _
+from openerp import api, fields, models
 from openerp.osv import fields as osv_fields
 from openerp.tools import mute_logger
 from openerp.osv.orm import browse_record
-
-import psycopg2
 
 
 class StockPickingMerge(models.TransientModel):
@@ -13,7 +15,8 @@ class StockPickingMerge(models.TransientModel):
     _description = 'Merge Pickings'
 
     destination_picking_id = fields.Many2one('stock.picking', string="Destination Picking")
-    source_picking_ids = fields.Many2many('stock.picking', 'picking_merge_rel', 'merge_id', 'picking_id', string="Source Picklings")
+    source_picking_ids = fields.Many2many(
+        'stock.picking', 'picking_merge_rel', 'merge_id', 'picking_id', string="Source Picklings")
 
     @api.multi
     def _update_refs(self, picking_id, new_picking_id):
@@ -53,7 +56,7 @@ class StockPickingMerge(models.TransientModel):
             if 'stock_picking_merge_' in table:
                 continue
 
-            query = "SELECT column_name FROM information_schema.columns WHERE table_name LIKE '%s'" % (table)
+            query = "SELECT column_name FROM information_schema.columns WHERE table_name LIKE '%s'" % table
             self.env.cr.execute(query, ())
             columns = []
             for data in self.env.cr.fetchall():
@@ -109,7 +112,6 @@ class StockPickingMerge(models.TransientModel):
         update_records('mail.followers', src=picking_id, field_model='res_model')
         update_records('mail.message', src=picking_id)
         update_records('ir.model.data', src=picking_id)
-        update_records('calendar', src=picking_id, field_model='model_id.model')
 
         proxy = self.env['ir.model.fields'].sudo()
         domain = [('ttype', '=', 'reference')]
@@ -148,29 +150,29 @@ class StockPickingMerge(models.TransientModel):
         values = dict()
         for column, field in columns.iteritems():
             if field._type not in ('many2many', 'one2many') and not isinstance(field, osv_fields.function):
-                if new_picking_id[column] == False and picking_id[column]:
+                if new_picking_id[column] is False and picking_id[column]:
                     values[column] = write_serializer(picking_id[column])
 
         values.pop('id', None)
 
         new_picking_id.write(values)
 
-    @api.onchange('destination_picking_id','source_picking_ids')
+    @api.onchange('destination_picking_id', 'source_picking_ids')
     def onchange_destination_picking_id(self):
-        domain = [('id','in',self.source_picking_ids.ids)]
+        domain = [('id', 'in', self.source_picking_ids.ids)]
         res = {'domain': {'destination_picking_id': domain}}
         if self.env.context.get('active_domain'):
             for picking_type in self.env.context.get('active_domain'):
                 if picking_type[0] == 'picking_type_id':
-                    domain.extend([('picking_type_id', '=', picking_type[2]), ('state','not in',['done','cancel'])])
+                    domain.extend([('picking_type_id', '=', picking_type[2]), ('state', 'not in', ['done', 'cancel'])])
                     res['domain'].update({'destination_picking_id': domain})
         return res
 
     @api.model
     def default_get(self, fields):
-        ''' 
+        """
         To get default values for the object.
-        '''
+        """
         res = super(StockPickingMerge, self).default_get(fields)
         res.update({'source_picking_ids': [(6, 0, self.env.context.get('active_ids'))] or []})
         if self.env.context.get('active_ids')[0]:
@@ -186,7 +188,6 @@ class StockPickingMerge(models.TransientModel):
                             picking.picking_type_id.id == self.destination_picking_id.picking_type_id.id and \
                             picking.location_id.id == self.destination_picking_id.location_id.id and \
                             picking.location_dest_id.id == self.destination_picking_id.location_dest_id.id and \
-                            picking.invoice_state == self.destination_picking_id.invoice_state and \
                             self.destination_picking_id.id != picking.id:
                 picking_ids.append(picking)
             elif self.destination_picking_id.id != picking.id:
@@ -206,7 +207,6 @@ class StockPickingMerge(models.TransientModel):
 
             self._update_refs(picking, self.destination_picking_id)
             picking.unlink()
-
 
         tree_view = self.env.ref('stock.vpicktree')
         form_view = self.env.ref('stock.view_picking_form')

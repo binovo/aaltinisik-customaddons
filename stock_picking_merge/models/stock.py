@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
-
-from openerp import api, fields, models, _
+# Copyright 2018 Ahmet Altinisik
+# License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
+from openerp import api, fields, models
 
 
 class stock_picking(models.Model):
@@ -28,5 +29,3 @@ class stock_picking(models.Model):
             'target': 'current',
             'nodestroy': True
         }
-
-# vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
