@@ -4,7 +4,7 @@
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 import psycopg2
 
-from openerp import api, fields, models
+from openerp import api, fields, models, exceptions, _
 from openerp.osv import fields as osv_fields
 from openerp.tools import mute_logger
 from openerp.osv.orm import browse_record
@@ -180,20 +180,35 @@ class StockPickingMerge(models.TransientModel):
         return res
 
     @api.multi
-    def merge_picking(self):
-        picking_ids = []
-        skip_ids = []
-        for picking in self.source_picking_ids:
-            if picking.partner_id.id == self.destination_picking_id.partner_id.id and \
-                            picking.picking_type_id.id == self.destination_picking_id.picking_type_id.id and \
-                            picking.location_id.id == self.destination_picking_id.location_id.id and \
-                            picking.location_dest_id.id == self.destination_picking_id.location_dest_id.id and \
-                            self.destination_picking_id.id != picking.id:
-                picking_ids.append(picking)
-            elif self.destination_picking_id.id != picking.id:
-                skip_ids.append(picking.id)
+    def _check_picking_able_to_merge(self, picking):
+        self.ensure_one()
+        res = True
+        if picking.partner_id.id != self.destination_picking_id.partner_id.id or \
+                picking.picking_type_id.id != self.destination_picking_id.picking_type_id.id or \
+                picking.location_id.id != self.destination_picking_id.location_id.id or \
+                picking.location_dest_id.id != self.destination_picking_id.location_dest_id.id:
+            res = False
+        return res
 
-        for picking in picking_ids:
+    @api.multi
+    def _check_source_pickings_able_to_merge(self):
+        self.ensure_one()
+        res = []
+        for picking in self.source_picking_ids:
+            res.append(self._check_picking_able_to_merge(picking))
+        return all(res)
+
+    @api.multi
+    def merge_picking(self):
+        self.ensure_one()
+        able_to_merge = self._check_source_pickings_able_to_merge()
+        if not able_to_merge:
+            raise exceptions.ValidationError(_(
+                "The selected pickings don't meet the requirements to merge!"
+            ))
+        for picking in self.source_picking_ids:
+            if picking.id == self.destination_picking_id.id:
+                continue
             if picking.note:
                 if self.destination_picking_id.note:
                     self.destination_picking_id.note += "\n\n" + picking.note
@@ -212,7 +227,7 @@ class StockPickingMerge(models.TransientModel):
         form_view = self.env.ref('stock.view_picking_form')
         return {
             'name': 'Picking Merge Results',
-            'domain': [('id', 'in', self.destination_picking_id.ids + skip_ids)],
+            'domain': [('id', 'in', self.destination_picking_id.ids)],
             'res_id': self.destination_picking_id.id,
             'view_type': 'form',
             'view_mode': 'form',
