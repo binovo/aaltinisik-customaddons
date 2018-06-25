@@ -16,7 +16,7 @@ class StockPickingMerge(models.TransientModel):
 
     destination_picking_id = fields.Many2one('stock.picking', string="Destination Picking")
     source_picking_ids = fields.Many2many(
-        'stock.picking', 'picking_merge_rel', 'merge_id', 'picking_id', string="Source Picklings")
+        'stock.picking', 'picking_merge_rel', 'merge_id', 'picking_id', string="Source Pickings")
 
     @api.multi
     def _update_refs(self, picking_id, new_picking_id):

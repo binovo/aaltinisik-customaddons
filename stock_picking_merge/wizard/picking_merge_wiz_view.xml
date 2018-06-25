@@ -16,7 +16,7 @@
                     <sheet>
                         <separator string="Merge the following pickings"/>
                         <p class="oe_grey">
-                            Please note that destination picking and picking list, picking type, partner, invoice control, source location, destination location are must be same for merging.
+                            Please note that destination picking and picking list, picking type, partner, source and destination location must be the same.
                         </p>
                         <group colspan="8">
                             <field name="destination_picking_id" required="1"/>
